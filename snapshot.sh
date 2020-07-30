@@ -7,11 +7,12 @@
 #username 3
 #password 4
 
+#Get the information from the file
 inputfile="infofile.txt"
 declare -i i=0
 
 while  read line ; do
-	info[$i]=$line
+	variable[$i]=$line
 	i=$((i+1))
 done <"$inputfile"
 
@@ -19,7 +20,7 @@ done <"$inputfile"
 TIMESTAMP=$(date -d "6 months ago" +"%Y.%m")
 
 #Get all of indices to the indicesList.txt file
-curl -k -u ${info[3]}:${info[4]} "https://${info[0]}:${info[1]}/_cat/indices?h=i,sth" > indicesList.txt
+curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_cat/indices?h=i,sth" > indicesList.txt
 
 
 #Filter the file according to the time format
@@ -27,13 +28,24 @@ indicesname=$(grep "$TIMESTAMP" indicesList.txt)
 echo "Archiving the following indices."
 echo $indicesname
 
+isClosed () {
+	#TODO: check if the index is closed
+}
 
-#unfrozen the indices
+openIndex () {
+	#TODO: open the index
+}
+
+closeIndex () {
+	#TODO: close the indiex
+}
+
+#unfrozen the index
 unfrozen () {
-	declare -i j=0
+	#declare -i j=0
 
 	while read line; do
-		test[j]=$line
+		#test[j]=$line
 
 		while read doc; do
 			testvar=($doc)
@@ -41,17 +53,18 @@ unfrozen () {
 			status=${testvar[1]}
 
 			if [[ $status = "true" ]]; then
-				curl -k -X POST -u ${info[3]}:${info[4]} "https://${info[0]}:${info[1]}/$data/_unfreeze?pretty"
+				curl -k -X POST -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$data/_unfreeze?pretty"
 			fi
-		done <<<"${test[j]}"
 
-		j=$((j+1))
+		done <<<"$line"
+
+		#j=$((j+1))
 	done <<<"$indicesname"
 }
 
 #Set the indices replica number to 0 to minimize the size of index.
 replicaTo0 () {
-	curl -k -X PUT -u ${info[3]}:${info[4]} "https://${info[0]}:${info[1]}/$OUTPUT/_settings?pretty" -H 'Content-Type: application/json' -d'
+	curl -k -X PUT -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$OUTPUT/_settings?pretty" -H 'Content-Type: application/json' -d'
 	{
 		"index" : {
 			"number_of_replicas" : 0
@@ -62,7 +75,7 @@ replicaTo0 () {
 
 #Create the snapshot with the same name as the indiex.
 createSnapshot () {
-	curl -k -X PUT -u ${info[3]}:${info[4]} "https://${info[0]}:${info[1]}/_snapshot/${info[2]}/$OUTPUT?wait_for_completion=true" -H 'Content-Type: application/json' -d '
+	curl -k -X PUT -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT?wait_for_completion=true" -H 'Content-Type: application/json' -d '
 	{
 		"indices": "'"$OUTPUT"'",
 		"ignore_unavailable": false,
@@ -72,18 +85,18 @@ createSnapshot () {
 }
 
 #Delete the snaphot
-deletesnap () {
-	curl -X DELETE -k -u ${info[3]}:${info[4]} "https://${info[0]}:${info[1]}/_snapshot/${info[2]}/$OUTPUT?pretty"
+deleteSnashot () {
+	curl -X DELETE -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT?pretty"
 }
 
 #Get status
-snapshotstatus () {
-	curl -k -u ${info[3]}:${info[4]} "https://${info[0]}:${info[1]}/_snapshot/${info[2]}/$OUTPUT"
+statusSnapshot () {
+	curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT"
 }
 
 #Delete indices
 deleteindices () {
-	curl -X DELETE "http://${info[0]}:${info[1]}/$OUTPUT?pretty"
+	curl -X DELETE "http://${variable[0]}:${variable[1]}/$OUTPUT?pretty"
 }
 
 while read -r OUTPUT
@@ -100,12 +113,12 @@ do
 		createSnapshot
 
 		#Get the status of the backup.
-		BackUpStatus=$(snapshotstatus)
+		backupstatus=$(statusSnapshot)
 
 		#Compress the index and then delete the snapshot.
-		if [[ $BackUpStatus = *'"state":"SUCCESS"'* ]]; then
+		if [[ $backupstatus = *'"state":"SUCCESS"'* ]]; then
 		        tar -cjf /backup/$OUTPUT.tar.bz2 /snapshot
-				deletesnap
+				deleteSnashot
 	#			DeleteState=true
 		fi
 
