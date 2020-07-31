@@ -20,10 +20,11 @@ done <"$inputfile"
 TIMESTAMP=$(date -d "6 months ago" +"%Y.%m")
 
 #Get all of indices to the indicesList.txt file
-curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_cat/indices?h=i,sth" > indicesList.txt
-
+curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_cat/indices?h=i,sth" > indicesListwithfrozen.txt
+curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_cat/indices?h=i" > indicesList.txt
 
 #Filter the file according to the time format
+frozenindicesname=$(grep "$TIMESTAMP" indicesListwithfrozen.txt)
 indicesname=$(grep "$TIMESTAMP" indicesList.txt)
 echo "Archiving the following indices."
 echo $indicesname
@@ -44,9 +45,9 @@ closeIndex () {
 	curl -X POST -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$1/_close?pretty"
 }
 
-isFrozen () {
-	#TODO: check if the index is frozen.
-}
+#isFrozen () {
+#	#TODO: check if the index is frozen.
+#}
 
 #unfrozen the index
 unfrozen () {
@@ -67,7 +68,7 @@ unfrozen () {
 		done <<<"$line"
 
 		#j=$((j+1))
-	done <<<"$indicesname"
+	done <<<"$frozenindicesname"
 }
 
 #Set the indices replica number to 0 to minimize the size of index.
@@ -117,7 +118,7 @@ do
 	else
 		date
 		indexstatus=$(isClosed $OUTPUT)
-		if [[ indexstatus == "close" ]]; then
+		if [[ $indexstatus == "close" ]]; then
 			openIndex $OUTPUT
 		fi
 		unfrozen
