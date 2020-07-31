@@ -7,3 +7,4 @@
 - archive folder name #the name of the snapshot
 - authentication username
 - authentication password
+- schema(using http or https)
