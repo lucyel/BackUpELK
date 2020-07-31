@@ -30,14 +30,22 @@ echo $indicesname
 
 isClosed () {
 	#TODO: check if the index is closed
+	curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_cat/indices/$1?h=status"
 }
 
 openIndex () {
 	#TODO: open the index
+	curl -X POST -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$1/_open?pretty"
+
 }
 
 closeIndex () {
 	#TODO: close the indiex
+	curl -X POST -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$1/_close?pretty"
+}
+
+isFrozen () {
+	#TODO: check if the index is frozen.
 }
 
 #unfrozen the index
@@ -108,6 +116,10 @@ do
 		continue
 	else
 		date
+		indexstatus=$(isClosed $OUTPUT)
+		if [[ indexstatus == "close" ]]; then
+			openIndex $OUTPUT
+		fi
 		unfrozen
 		replicaTo0
 		createSnapshot
