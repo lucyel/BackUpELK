@@ -87,7 +87,7 @@ replicaTo0 () {
 createSnapshot () {
 	curl -k -X PUT -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT?wait_for_completion=true" -H 'Content-Type: application/json' -d '
 	{
-		"indices": "'"$OUTPUT"'"",
+		"indices": "'"$OUTPUT"'",
 		"ignore_unavailable": false,
 		"include_global_state": true
 	}
