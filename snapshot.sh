@@ -6,6 +6,7 @@
 #archive dir 2
 #username 3
 #password 4
+#schema 5
 
 #Get the information from the file
 inputfile="infofile.txt"
@@ -20,8 +21,8 @@ done <"$inputfile"
 TIMESTAMP=$(date -d "6 months ago" +"%Y.%m")
 
 #Get all of indices to the indicesList.txt file
-curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_cat/indices?h=i,sth" > indicesListwithfrozen.txt
-curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_cat/indices?h=i" > indicesList.txt
+curl -k -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/_cat/indices?h=i,sth" > indicesListwithfrozen.txt
+curl -k -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/_cat/indices?h=i" > indicesList.txt
 
 #Filter the file according to the time format
 frozenindicesname=$(grep "$TIMESTAMP" indicesListwithfrozen.txt)
@@ -31,18 +32,18 @@ echo $indicesname
 
 isClosed () {
 	#TODO: check if the index is closed
-	curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_cat/indices/$1?h=status"
+	curl -k -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/_cat/indices/$1?h=status"
 }
 
 openIndex () {
 	#TODO: open the index
-	curl -X POST -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$1/_open?pretty"
+	curl -X POST -k -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/$1/_open?pretty"
 
 }
 
 closeIndex () {
 	#TODO: close the indiex
-	curl -X POST -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$1/_close?pretty"
+	curl -X POST -k -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/$1/_close?pretty"
 }
 
 #isFrozen () {
@@ -62,7 +63,7 @@ unfrozen () {
 			status=${testvar[1]}
 
 			if [[ $status = "true" ]]; then
-				curl -k -X POST -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$data/_unfreeze?pretty"
+				curl -k -X POST -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/$data/_unfreeze?pretty"
 			fi
 
 		done <<<"$line"
@@ -73,7 +74,7 @@ unfrozen () {
 
 #Set the indices replica number to 0 to minimize the size of index.
 replicaTo0 () {
-	curl -k -X PUT -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/$OUTPUT/_settings?pretty" -H 'Content-Type: application/json' -d'
+	curl -k -X PUT -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/$OUTPUT/_settings?pretty" -H 'Content-Type: application/json' -d'
 	{
 		"index" : {
 			"number_of_replicas" : 0
@@ -84,9 +85,9 @@ replicaTo0 () {
 
 #Create the snapshot with the same name as the indiex.
 createSnapshot () {
-	curl -k -X PUT -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT?wait_for_completion=true" -H 'Content-Type: application/json' -d '
+	curl -k -X PUT -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT?wait_for_completion=true" -H 'Content-Type: application/json' -d '
 	{
-		"indices": "'"$OUTPUT"'",
+		"indices": "'"$OUTPUT"'"",
 		"ignore_unavailable": false,
 		"include_global_state": true
 	}
@@ -95,12 +96,12 @@ createSnapshot () {
 
 #Delete the snaphot
 deleteSnashot () {
-	curl -X DELETE -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT?pretty"
+	curl -X DELETE -k -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT?pretty"
 }
 
 #Get status
 statusSnapshot () {
-	curl -k -u ${variable[3]}:${variable[4]} "https://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT"
+	curl -k -u ${variable[3]}:${variable[4]} "${variable[5]}://${variable[0]}:${variable[1]}/_snapshot/${variable[2]}/$OUTPUT"
 }
 
 #Delete indices
@@ -108,6 +109,8 @@ deleteindices () {
 	curl -X DELETE "http://${variable[0]}:${variable[1]}/$OUTPUT?pretty"
 }
 
+
+unfrozen
 while read -r OUTPUT
 do
 	echo $OUTPUT
@@ -121,7 +124,6 @@ do
 		if [[ $indexstatus == "close" ]]; then
 			openIndex $OUTPUT
 		fi
-		unfrozen
 		replicaTo0
 		createSnapshot
 
